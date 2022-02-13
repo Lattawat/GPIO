@@ -128,19 +128,19 @@ int main(void)
 //	  }
 // in class code
 
-//	  static GPIO_PinState B1State[2] = {0};
-//	  static GPIO_PinState B2State[2] = {0};
-//	  static GPIO_PinState B3State[2] = {0};
-//	  static GPIO_PinState B4State[2] = {0};
-//
-//	  static uint32_t Timedelay = 500;
-//	  static uint8_t Blink = 0;
-//	  static uint8_t mode = 1;
-//	  static uint16_t brightness = 0;
-//
+	  static GPIO_PinState B1State[2] = {0};
+	  static GPIO_PinState B2State[2] = {0};
+	  static GPIO_PinState B3State[2] = {0};
+	  static GPIO_PinState B4State[2] = {0};
+
+	  static uint32_t Timedelay = 500;
+	  static uint8_t Blink = 0;
+	  static uint8_t mode = 1;
+	  static uint16_t brightness = 0;
+
 //	  pwm1 = 40;
 //	  pwm2 = 60;
-//
+
 //	  static uint32_t refTime[2] = {0};
 //
 //	  B1State[0] = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_10);
@@ -185,7 +185,7 @@ int main(void)
 //	  }
 //	  else{
 //		  static uint32_t Timestamp2 = 0;
-//		  if (HAL_GetTick() - Timestamp2 >= 2000){
+//		  if (HAL_GetTick() - Timestamp2 >= 500){
 //			  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
 //			  Timestamp2 = HAL_GetTick();
 //		  }
@@ -228,28 +228,28 @@ int main(void)
 //		  }
 //	  }
 //
-//	  B4State[0] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4);
-//	  if (B4State[0] == GPIO_PIN_RESET && B4State[1] == GPIO_PIN_SET){
-//		  if(brightness == 0){
-//			  brightness = 25;
-//		  }
-//		  else if(brightness == 25){
-//			  brightness = 50;
-//		  }
-//		  else if(brightness == 50){
-//			  brightness = 75;
-//		  }
-//		  else if(brightness == 75){
-//			  brightness = 100;
-//		  }
-//		  else{
-//			  brightness = 0;
-//		  }
-//	  }
-//	  B4State[1] = B4State[0];
+	  B4State[0] = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_4);
+	  if (B4State[0] == GPIO_PIN_RESET && B4State[1] == GPIO_PIN_SET){
+		  if(brightness == 0){
+			  brightness = 25;
+		  }
+		  else if(brightness == 25){
+			  brightness = 50;
+		  }
+		  else if(brightness == 50){
+			  brightness = 75;
+		  }
+		  else if(brightness == 75){
+			  brightness = 100;
+		  }
+		  else{
+			  brightness = 0;
+		  }
+	  }
+	  B4State[1] = B4State[0];
 
-	  uint16_t pwm1 = 90;
-	  uint16_t pwm2 = 10;
+	  uint16_t pwm1 = 100 - brightness;
+	  uint16_t pwm2 = brightness;
 
 	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, pwm1));	// compare counter with pwm1
 	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_2, pwm2));	// compare counter with pwm2

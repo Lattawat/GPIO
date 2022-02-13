@@ -42,7 +42,7 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint16_t buttonState = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -50,7 +50,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+void buttonMatrixRead();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -95,9 +95,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  buttonMatrixRead();
+
   }
   /* USER CODE END 3 */
 }
@@ -209,16 +212,23 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD2_Pin L4_Pin L1_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin|L4_Pin|L1_Pin;
+  /*Configure GPIO pin : LD2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : L4_Pin L1_Pin */
+  GPIO_InitStruct.Pin = L4_Pin|L1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : L2_Pin */
   GPIO_InitStruct.Pin = L2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(L2_GPIO_Port, &GPIO_InitStruct);
@@ -226,18 +236,18 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : R1_Pin */
   GPIO_InitStruct.Pin = R1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(R1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : R2_Pin R4_Pin R3_Pin */
   GPIO_InitStruct.Pin = R2_Pin|R4_Pin|R3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : L3_Pin */
   GPIO_InitStruct.Pin = L3_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(L3_GPIO_Port, &GPIO_InitStruct);
@@ -245,6 +255,35 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+GPIO_TypeDef* BMPortR[4] = {R1_GPIO_Port, R2_GPIO_Port, R3_GPIO_Port, R4_GPIO_Port};
+uint16_t BMPinR[4] = {R1_Pin, R2_Pin, R3_Pin, R4_Pin};
+
+GPIO_TypeDef* BMPortL[4] = {L1_GPIO_Port, L2_GPIO_Port, L3_GPIO_Port, L4_GPIO_Port};
+uint16_t BMPinL[4] = {L1_Pin, L2_Pin, L3_Pin, L4_Pin};
+
+static uint8_t currentL = 0;
+
+void buttonMatrixRead(){
+	static uint32_t Timestamp = 0;
+	if(HAL_GetTick() - Timestamp >= 100){
+		Timestamp = HAL_GetTick();
+		for(int i = 0; i<4 ; i++){
+			if(HAL_GPIO_ReadPin(BMPortR[i], BMPinR[i]) == GPIO_PIN_RESET){
+				buttonState = buttonState | (1 << (i + 4 * currentL));
+			}
+			else{
+				buttonState = buttonState & ~(1 << (i + 4 * currentL));
+			}
+		}
+		HAL_GPIO_WritePin(BMPortL[currentL], BMPinL[currentL], GPIO_PIN_SET);
+		uint8_t nextL = (currentL + 1)%4;
+		HAL_GPIO_WritePin(BMPortL[nextL], BMPinL[nextL], GPIO_PIN_RESET);
+		currentL = nextL;
+
+
+	}
+}
 
 /* USER CODE END 4 */
 
