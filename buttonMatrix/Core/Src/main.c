@@ -263,10 +263,13 @@ GPIO_TypeDef* BMPortL[4] = {L1_GPIO_Port, L2_GPIO_Port, L3_GPIO_Port, L4_GPIO_Po
 uint16_t BMPinL[4] = {L1_Pin, L2_Pin, L3_Pin, L4_Pin};
 
 static uint8_t currentL = 0;
+static uint16_t operateTime = 0;
 
 void buttonMatrixRead(){
 	static uint32_t Timestamp = 0;
+
 	if(HAL_GetTick() - Timestamp >= 100){
+		operateTime = HAL_GetTick();
 		Timestamp = HAL_GetTick();
 		for(int i = 0; i<4 ; i++){
 			if(HAL_GPIO_ReadPin(BMPortR[i], BMPinR[i]) == GPIO_PIN_RESET){
@@ -280,7 +283,7 @@ void buttonMatrixRead(){
 		uint8_t nextL = (currentL + 1)%4;
 		HAL_GPIO_WritePin(BMPortL[nextL], BMPinL[nextL], GPIO_PIN_RESET);
 		currentL = nextL;
-
+		operateTime = HAL_GetTick() - operateTime;
 
 	}
 }
