@@ -42,7 +42,14 @@
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+
 uint16_t buttonState = 0;
+uint16_t out = 0;
+uint8_t status[3] = {1,0,0};
+uint8_t currentL = 0;
+uint8_t currentL2 = 0;
+uint16_t operateTime = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -50,7 +57,9 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void TestButtonMatrixRead();
 void buttonMatrixRead();
+uint8_t valueDecoder(uint16_t);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -95,11 +104,76 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  uint32_t clock = 0;
+	  uint16_t buttonVal[4] = {0};
+	  static enum {init, correct, incorrect, check, waitForClear} State = init;
+	  int8_t pass[] = {6,3,3,4,0,5,0,0,0,5,6};
+	  uint8_t pos = 0;
+
+	  switch(State){
+	  default:
+	  case init:
+		  pos = 0;
+		  clock = HAL_GetTick();
+		  State = incorrect;
+		  break;
+	  case incorrect:
+		  if(HAL_GetTick() - clock > 100 && pos < 11){
+			  buttonMatrixRead();
+			  if (status[0] == 0){
+				  State = check;
+			  }
+			  else{
+				  State = incorrect;
+			  }
+			  break;
+		  }
+	  case check:
+		  if(HAL_GetTick() - clock > 100){
+			  if (pass[pos] == valueDecoder(out)){
+				  if(pos != 10){
+					  pos++;
+				  }
+			  } //// input number
+			  else if (pass[pos] != valueDecoder(out)){
+
+				  if(valueDecoder(out) == 12){
+					  pos--;
+					  State == incorrect;
+				  } //// input bs
+				  else if(valueDecoder(out) == 11){
+					  pos = 0;
+					  State == incorrect;
+				  } //// input clr
+				  else if(valueDecoder(out) == 10){
+					  if(pos != 10){
+						  State = incorrect;
+					  }
+				  } //// input ok
+				  else if(valueDecoder(out) == 13){
+					  State = incorrect
+				  } //// none
+				  else{
+					  State = waitForClear;
+				  }
+			  }
+			  break;
+		  }
+	  case correct:
+		  // wait for clear and reset
+		  break;
+
+	  case waitForClear:
+		  //wait for clear
+		  break;
+	  }
+
+
+
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  buttonMatrixRead();
 
   }
   /* USER CODE END 3 */
@@ -262,14 +336,12 @@ uint16_t BMPinR[4] = {R1_Pin, R2_Pin, R3_Pin, R4_Pin};
 GPIO_TypeDef* BMPortL[4] = {L1_GPIO_Port, L2_GPIO_Port, L3_GPIO_Port, L4_GPIO_Port};
 uint16_t BMPinL[4] = {L1_Pin, L2_Pin, L3_Pin, L4_Pin};
 
-static uint8_t currentL = 0;
-static uint16_t operateTime = 0;
-
-void buttonMatrixRead(){
+void TestButtonMatrixRead(){
 	static uint32_t Timestamp = 0;
+	//uint16_t out = 0;
 
 	if(HAL_GetTick() - Timestamp >= 100){
-		operateTime = HAL_GetTick();
+		operateTime = HAL_GetTick(); ///// try to find a runtime of this function
 		Timestamp = HAL_GetTick();
 		for(int i = 0; i<4 ; i++){
 			if(HAL_GPIO_ReadPin(BMPortR[i], BMPinR[i]) == GPIO_PIN_RESET){
@@ -284,10 +356,88 @@ void buttonMatrixRead(){
 		HAL_GPIO_WritePin(BMPortL[nextL], BMPinL[nextL], GPIO_PIN_RESET);
 		currentL = nextL;
 		operateTime = HAL_GetTick() - operateTime;
+	}
+}
+
+void buttonMatrixRead(){
+	static uint32_t Timestamp = 0;
+
+
+	if(HAL_GetTick() - Timestamp >= 50){
+		Timestamp = HAL_GetTick();
+		for(int i = 0 ; i< 4 ; i++){
+			if(status[0] == 0 && status[1] == i && status[2] == currentL2){
+				status[0] = 0x01;
+			}
+			if(HAL_GPIO_ReadPin(BMPortR[i], BMPinR[i]) == GPIO_PIN_RESET && status[0] == 0x01){
+				out =  (0 | (1 << (i + 4 * currentL2)));
+				status[0] = 0;
+				status[1] = i;
+				status[2] = currentL2;
+			}
+		}
+		HAL_GPIO_WritePin(BMPortL[currentL2], BMPinL[currentL2], GPIO_PIN_SET);
+		uint8_t nextL = (currentL2 + 1)%4;
+		HAL_GPIO_WritePin(BMPortL[nextL], BMPinL[nextL], GPIO_PIN_RESET);
+		currentL2 = nextL;
 
 	}
 }
 
+uint8_t valueDecoder(uint16_t buttonState){
+	if(buttonState == 0b1000000000000000){
+		return 10; //ok
+	}
+	else if(buttonState == 0b0100000000000000){
+		return 13; //none
+	}
+	else if(buttonState == 0b0010000000000000){
+		return 13; //none
+	}
+	else if(buttonState == 0b0001000000000000){
+		return 0;
+	}
+	else if(buttonState == 0b100000000000){
+		return 13; //none
+	}
+	else if(buttonState == 0b010000000000){
+		return 3;
+	}
+	else if(buttonState == 0b001000000000){
+		return 2;
+	}
+	else if(buttonState == 0b000100000000){
+		return 1;
+	}
+	else if(buttonState == 0b10000000){
+		return 12; //backspace
+	}
+	else if(buttonState == 0b01000000){
+		return 6;
+	}
+	else if(buttonState == 0b00100000){
+		return 5;
+	}
+	else if(buttonState == 0b00010000){
+		return 4;
+	}
+	else if(buttonState == 0b1000){
+		return 11; //clear
+	}
+	else if(buttonState == 0b0100){
+		return 9;
+	}
+	else if(buttonState == 0b0010){
+		return 8;
+	}
+	else if(buttonState == 0b0001){
+		return 7;
+	}
+	else{
+		return 13; // none
+	}
+
+}
 /* USER CODE END 4 */
 
 /**
