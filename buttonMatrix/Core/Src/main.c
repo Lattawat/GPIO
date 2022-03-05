@@ -49,6 +49,8 @@ uint8_t status[3] = {1,0,0};
 uint8_t currentL = 0;
 uint8_t currentL2 = 0;
 uint16_t operateTime = 0;
+uint8_t pos = 0;
+int8_t score = 0;
 
 /* USER CODE END PV */
 
@@ -59,6 +61,8 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void TestButtonMatrixRead();
 void buttonMatrixRead();
+void blink_correct();
+void blink_incorrect();
 uint8_t valueDecoder(uint16_t);
 /* USER CODE END PFP */
 
@@ -102,20 +106,19 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t clock = 0;
+  static enum {init, correct, incorrect, check} State = init;
+  int8_t pass[] = {6,3,3,4,0,5,0,0,0,5,6};
+
   while (1)
   {
-	  uint32_t clock = 0;
-	  uint16_t buttonVal[4] = {0};
-	  static enum {init, correct, incorrect, check, waitForClear} State = init;
-	  int8_t pass[] = {6,3,3,4,0,5,0,0,0,5,6};
-	  uint8_t pos = 0;
-
 	  switch(State){
 	  default:
 	  case init:
 		  pos = 0;
 		  clock = HAL_GetTick();
 		  State = incorrect;
+		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
 		  break;
 	  case incorrect:
 		  if(HAL_GetTick() - clock > 100 && pos < 11){
@@ -123,48 +126,58 @@ int main(void)
 			  if (status[0] == 0){
 				  State = check;
 			  }
-			  else{
-				  State = incorrect;
-			  }
 			  break;
 		  }
 	  case check:
-		  if(HAL_GetTick() - clock > 100){
+		  if(HAL_GetTick() - clock > 200){
 			  if (pass[pos] == valueDecoder(out)){
-				  if(pos != 10){
+				  if(pos != 10 && score == 0){
 					  pos++;
+					  out = 10;
+				  }
+				  if(score == 0){
+					  blink_correct();
+					  out = 10;
+					  State = incorrect;
 				  }
 			  } //// input number
 			  else if (pass[pos] != valueDecoder(out)){
-
-				  if(valueDecoder(out) == 12){
-					  pos--;
-					  State == incorrect;
-				  } //// input bs
-				  else if(valueDecoder(out) == 11){
+//				  if(valueDecoder(out) == 12){
+//					  pos--;
+//					  State = incorrect;
+//				  } //// input bs
+				  if(valueDecoder(out) == 11){
 					  pos = 0;
-					  State == incorrect;
+					  score = 0;
+					  State = incorrect;
 				  } //// input clr
 				  else if(valueDecoder(out) == 10){
-					  if(pos != 10){
+					  if(pos == 10 && score == 0){
+						  State = correct;
+					  }
+					  else if(score == 0){
 						  State = incorrect;
 					  }
 				  } //// input ok
 				  else if(valueDecoder(out) == 13){
-					  State = incorrect
+					  State = incorrect;
 				  } //// none
 				  else{
-					  State = waitForClear;
+					  score = -1;
+					  blink_incorrect();
+					  State = incorrect;
 				  }
 			  }
 			  break;
 		  }
 	  case correct:
-		  // wait for clear and reset
-		  break;
+		  clock = HAL_GetTick();
+		  while(HAL_GetTick() - clock < 1500){
+		  	  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+		  }
+		  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+		  State = incorrect;
 
-	  case waitForClear:
-		  //wait for clear
 		  break;
 	  }
 
@@ -410,7 +423,7 @@ uint8_t valueDecoder(uint16_t buttonState){
 		return 1;
 	}
 	else if(buttonState == 0b10000000){
-		return 12; //backspace
+		return 13; //backspace (12)
 	}
 	else if(buttonState == 0b01000000){
 		return 6;
@@ -436,6 +449,25 @@ uint8_t valueDecoder(uint16_t buttonState){
 	else{
 		return 13; // none
 	}
+
+}
+
+void blink_correct(){
+	uint32_t timestamp;
+	timestamp = HAL_GetTick();
+	while(HAL_GetTick() - timestamp < 100){
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+	}
+	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
+}
+
+void blink_incorrect(){
+	uint32_t timestamp;
+	timestamp = HAL_GetTick();
+	while(HAL_GetTick() - timestamp < 300){
+		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+	}
+	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
 }
 /* USER CODE END 4 */
