@@ -49,7 +49,10 @@ typedef struct{
 	uint16_t data;
 }ADCStructure;
 
-ADCStructure ADCChannel[3];
+ADCStructure ADCChannel[2];
+
+uint8_t ADCMode = 0;
+uint16_t ADCOutputConverted = 0;
 
 
 /* USER CODE END PV */
@@ -60,8 +63,10 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
+
 void ADCConfigInit();
 void ADCPollingMethodUpdate();
+uint8_t PressTheButton();
 
 /* USER CODE END PFP */
 
@@ -110,7 +115,22 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(PressTheButton() == 1){
+		  ADCMode = (ADCMode + 1)%2;
+	  }
+
 	  ADCPollingMethodUpdate();
+
+	  if(ADCMode == 0){
+		  ADCOutputConverted = (ADCChannel[ADCMode].data * 3300) / 4095;
+	  }
+	  else if(ADCMode == 1){
+		  ADCOutputConverted = ((((ADCChannel[ADCMode].data * 3300) / 4095) - 760) / 2.5) + 25;
+	  }
+	  else{
+		  //must be error
+	  }
+
 
 
     /* USER CODE END WHILE */
@@ -265,11 +285,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
+  /*Configure GPIO pin : BlueButton_Pin */
+  GPIO_InitStruct.Pin = BlueButton_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(BlueButton_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
@@ -286,18 +306,14 @@ void ADCConfigInit(){
 	ADCChannel[0].Config.Channel = ADC_CHANNEL_0;
 	ADCChannel[0].Config.Rank = 1;
 	ADCChannel[0].Config.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-	//config ADC channel PA1
-	ADCChannel[1].Config.Channel = ADC_CHANNEL_1;
+	//config ADC channel Tempsensor
+	ADCChannel[1].Config.Channel = ADC_CHANNEL_TEMPSENSOR;
 	ADCChannel[1].Config.Rank = 1;
 	ADCChannel[1].Config.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-	//config ADC channel Tempsensor
-	ADCChannel[2].Config.Channel = ADC_CHANNEL_TEMPSENSOR;
-	ADCChannel[2].Config.Rank = 1;
-	ADCChannel[2].Config.SamplingTime = ADC_SAMPLETIME_3CYCLES;
 }
 
 void ADCPollingMethodUpdate(){
-	for(int i = 0 ; i< 3 ; i++){
+	for(int i = 0 ; i< 2 ; i++){
 		//set ADC CHANNEL
 		HAL_ADC_ConfigChannel(&hadc1, &ADCChannel[i].Config);
 
@@ -312,6 +328,21 @@ void ADCPollingMethodUpdate(){
 		//stop ADC
 		HAL_ADC_Stop(&hadc1);
 	}
+}
+
+uint8_t PressTheButton(){
+	static uint8_t status = 0;
+	static uint8_t buttonState[2] = {0};
+	buttonState[0] = HAL_GPIO_ReadPin(BlueButton_GPIO_Port, BlueButton_Pin);
+	if(buttonState[0] == GPIO_PIN_RESET && buttonState[1] == GPIO_PIN_SET){
+		status = 1;
+	}
+	else{
+		status = 0;
+	}
+	buttonState[1] = buttonState[0];
+	return status;
+
 }
 
 /* USER CODE END 4 */
