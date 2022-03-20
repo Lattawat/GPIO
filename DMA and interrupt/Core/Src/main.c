@@ -46,6 +46,11 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint32_t ADCData[4] = {0};
+uint32_t timestamp[2] = {0};
+uint8_t status = 0;
+uint32_t totaltime = 0;
+
+uint64_t counter = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,8 +107,16 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  if(status == 1){
+		  timestamp[0] = HAL_GetTick();
+		  while(HAL_GetTick() - timestamp[0] < 1000){
+			  counter = HAL_GetTick();
+		  }
+		  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+		  timestamp[0] = HAL_GetTick();
+		  counter ++;
+	  }
 
-	  HAL_Delay(10000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -298,7 +311,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
@@ -316,15 +329,26 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-//				void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) //callback use with external interrupt
-//				{
-//					if (GPIO_Pin == GPIO_PIN_13){
-//						HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-//					}
-//				} // toggle LED using interrupt
-void HAL_GPIO_Callback(uint16_t GPIO_Pin){
-	if (GPIO_Pin == GPIO_PIN_13){
+//void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) //callback use with external interrupt
+//{
+//	if (GPIO_Pin == GPIO_PIN_13){
+//		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+//	}
+//} // toggle LED using interrupt
 
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	if (GPIO_Pin == GPIO_PIN_13){
+		if(status == 0){
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+			status = 1;
+		}
+		else{
+			timestamp[1] = HAL_GetTick();
+			totaltime = timestamp[1] - timestamp[0];
+			status = 0;
+		}
 	}
 }
 /* USER CODE END 4 */
