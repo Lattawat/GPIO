@@ -107,19 +107,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(status == 1){
-		  timestamp[0] = HAL_GetTick();
-		  while(HAL_GetTick() - timestamp[0] < 1000){
-			  counter = HAL_GetTick();
-		  }
-		  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-		  timestamp[0] = HAL_GetTick();
-		  counter ++;
-	  }
 
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
+//	  counter2 ++;
   }
   /* USER CODE END 3 */
 }
@@ -207,7 +200,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_84CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -341,8 +334,15 @@ static void MX_GPIO_Init(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if (GPIO_Pin == GPIO_PIN_13){
 		if(status == 0){
-			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
 			status = 1;
+//			HAL_Delay(1000+((22695477*ADCData[0])+ADCData[1])%10000);
+			timestamp[0] = HAL_GetTick();
+			HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+			while(HAL_GetTick() - timestamp[0] < 1000){
+				counter = HAL_GetTick();
+			}
+			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+			timestamp[0] = HAL_GetTick();
 		}
 		else{
 			timestamp[1] = HAL_GetTick();
